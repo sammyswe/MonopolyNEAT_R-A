@@ -1,4 +1,12 @@
-﻿using System;
+﻿// Program.cs
+// -----------
+// Entry point of the Monopoly NEAT AI application. This file:
+// - Initializes components (Analytics, NEAT modules, RNG)
+// - Loads a saved population of neural networks from file if available
+// - Runs a training loop where tournaments are executed and new generations are created
+// - Saves the population state after every generation for persistence
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -8,26 +16,28 @@ namespace Monopoly
     {
         static void Main(string[] args)
         {
+            // Initialize analytics tracking system and assign singleton instance
             Analytics a = new Analytics();
             Analytics.instance = a;
 
+            // Path to the population save file
             string path = "C:\\Users\\Brad\\Desktop\\monopoly_population.txt";
 
+            // Initialize random number generator
             RNG.Initialise();
 
+            // Initialize NEAT modules
             NEAT.NetworkFactory.Initialise();
-
             NEAT.Mutation.Initialise();
             NEAT.Crossover.Initialise();
             NEAT.Population.Initialise();
 
+            // Create tournament manager
             Tournament tournament = new Tournament();
 
-            //SaveState(path, tournament);
-
+            // Load saved state if file exists, otherwise start fresh
             if (File.Exists(path))
             {
-                //tournament.Initialise();
                 LoadState(path, ref tournament);
             }
             else
@@ -35,18 +45,20 @@ namespace Monopoly
                 tournament.Initialise();
             }
 
+            // Run 1000 generations of tournaments
             for (int i = 0; i < 1000; i++)
             {
                 tournament.ExecuteTournament();
                 NEAT.Population.instance.NewGeneration();
                 SaveState(path, tournament);
             }
-            
         }
 
+        // Delimiters used to split serialized save data
         public static char DELIM_MAIN = ';';
         public static char DELIM_COMMA = ',';
 
+        // Saves the current population and tournament state to file
         public static void SaveState(string target, Tournament tournament)
         {
             Console.WriteLine("SAVING POPULATION");
@@ -54,6 +66,7 @@ namespace Monopoly
             string build = "";
             string build2 = "";
 
+            // Save generation number and current champion score
             build += NEAT.Population.instance.GENERATION.ToString();
             build += DELIM_MAIN;
             build += tournament.championScore.ToString();
@@ -61,21 +74,15 @@ namespace Monopoly
 
             int markings = 0;
 
-            //save markings
+            // Save historical mutation markings (innovation tracking)
             for (int i = 0; i < NEAT.Mutation.instance.historical.Count; i++)
             {
-                build += NEAT.Mutation.instance.historical[i].order;
-                build += DELIM_COMMA;
-
-                build += NEAT.Mutation.instance.historical[i].source;
-                build += DELIM_COMMA;
-
+                build += NEAT.Mutation.instance.historical[i].order + DELIM_COMMA;
+                build += NEAT.Mutation.instance.historical[i].source + DELIM_COMMA;
                 build += NEAT.Mutation.instance.historical[i].destination;
 
                 if (i != NEAT.Mutation.instance.historical.Count - 1)
-                {
                     build += DELIM_COMMA;
-                }
 
                 markings++;
             }
@@ -84,22 +91,23 @@ namespace Monopoly
             int net_count = -1;
             int gene_count = 0;
 
-            build += DELIM_MAIN; 
+            build += DELIM_MAIN; // Start of network section
 
-            //save neworks, species by species
+            // Save neural networks, species by species
             for (int i = 0; i < NEAT.Population.instance.species.Count; i++)
             {
                 net_build.Add("");
                 net_count++;
 
-                net_build[net_count] += NEAT.Population.instance.species[i].topFitness.ToString();
-                net_build[net_count] += DELIM_COMMA;
-                net_build[net_count] += NEAT.Population.instance.species[i].staleness.ToString();
+                // Save species metadata
+                net_build[net_count] += NEAT.Population.instance.species[i].topFitness + DELIM_COMMA;
+                net_build[net_count] += NEAT.Population.instance.species[i].staleness;
 
                 net_build[net_count] += "&";
 
                 int members = NEAT.Population.instance.species[i].members.Count;
 
+                // Save each network (genotype)
                 for (int j = 0; j < members; j++)
                 {
                     net_build.Add("");
@@ -110,63 +118,49 @@ namespace Monopoly
 
                     NEAT.Genotype genes = NEAT.Population.instance.species[i].members[j];
 
-                    int vertices = genes.vertices.Count;
-
-                    for (int k = 0; k < vertices; k++)
+                    // Save vertices
+                    foreach (var vertex in genes.vertices)
                     {
-                        net_build[net_count] += genes.vertices[k].index.ToString();
-                        net_build[net_count] += DELIM_COMMA;
-                        net_build[net_count] += genes.vertices[k].type.ToString();
-                        net_build[net_count] += DELIM_COMMA;
+                        net_build[net_count] += vertex.index + DELIM_COMMA + vertex.type + DELIM_COMMA;
                     }
 
                     net_build[net_count] += '#';
 
-                    int edges = genes.edges.Count;
-
-                    for (int k = 0; k < edges; k++)
+                    // Save edges (connections)
+                    foreach (var edge in genes.edges)
                     {
-                        net_build[net_count] += genes.edges[k].source.ToString();
-                        net_build[net_count] += DELIM_COMMA;
-                        net_build[net_count] += genes.edges[k].destination.ToString();
-                        net_build[net_count] += DELIM_COMMA;
-                        net_build[net_count] += genes.edges[k].weight.ToString();
-                        net_build[net_count] += DELIM_COMMA;
-                        net_build[net_count] += genes.edges[k].enabled.ToString();
-                        net_build[net_count] += DELIM_COMMA;
-                        net_build[net_count] += genes.edges[k].innovation.ToString();
-                        net_build[net_count] += DELIM_COMMA;
+                        net_build[net_count] += edge.source + DELIM_COMMA;
+                        net_build[net_count] += edge.destination + DELIM_COMMA;
+                        net_build[net_count] += edge.weight + DELIM_COMMA;
+                        net_build[net_count] += edge.enabled + DELIM_COMMA;
+                        net_build[net_count] += edge.innovation + DELIM_COMMA;
                     }
 
                     if (j != members - 1)
-                    {
-                        net_build[net_count] += "n";
-                    }
+                        net_build[net_count] += "n"; // Next genotype in species
                 }
 
                 if (i != NEAT.Population.instance.species.Count - 1)
-                {
-                    net_build[net_count] += "&";
-                }          
+                    net_build[net_count] += "&"; // Next species
             }
 
             build2 += DELIM_MAIN;
 
+            // Write everything to file
             using (StreamWriter sw = new StreamWriter(target))
             {
                 sw.Write(build);
-
                 foreach (string b in net_build)
                 {
                     sw.Write(b);
                 }
-
                 sw.Write(build2);
             }
 
             Console.WriteLine(markings + " MARKINGS");
         }
 
+        // Loads the population and tournament state from a saved file
         public static void LoadState(string location, ref Tournament tournament)
         {
             string load = "";
@@ -178,65 +172,57 @@ namespace Monopoly
 
             string[] parts = load.Split(DELIM_MAIN);
 
+            // Restore generation and champion score
             int gen = int.Parse(parts[0]);
             float score = float.Parse(parts[1]);
 
             NEAT.Population.instance.GENERATION = gen;
             tournament.championScore = score;
 
-            string markingString = parts[2];
-            string[] markingParts = markingString.Split(DELIM_COMMA);
-
-            for (int i = 0; i < markingParts.GetLength(0); i += 3)
+            // Restore mutation history
+            string[] markingParts = parts[2].Split(DELIM_COMMA);
+            for (int i = 0; i < markingParts.Length; i += 3)
             {
-                int order = int.Parse(markingParts[i]);
-                int source = int.Parse(markingParts[i + 1]);
-                int destination = int.Parse(markingParts[i + 2]);
-
-                NEAT.Marking recreation = new NEAT.Marking();
-
-                recreation.order = order;
-                recreation.source = source;
-                recreation.destination = destination;
+                var recreation = new NEAT.Marking
+                {
+                    order = int.Parse(markingParts[i]),
+                    source = int.Parse(markingParts[i + 1]),
+                    destination = int.Parse(markingParts[i + 2])
+                };
 
                 NEAT.Mutation.instance.historical.Add(recreation);
             }
 
-            string networkString = parts[3];
-            string[] speciesParts = networkString.Split('&');
-
-            for (int x = 0; x < speciesParts.GetLength(0); x+=2)
+            // Restore species and networks
+            string[] speciesParts = parts[3].Split('&');
+            for (int x = 0; x < speciesParts.Length; x += 2)
             {
                 string[] firstParts = speciesParts[x].Split(DELIM_COMMA);
 
-                NEAT.Population.instance.species.Add(new NEAT.Species());
-                NEAT.Population.instance.species[NEAT.Population.instance.species.Count - 1].topFitness = float.Parse(firstParts[0]);
-                NEAT.Population.instance.species[NEAT.Population.instance.species.Count - 1].staleness = int.Parse(firstParts[1]);
-
-                string[] networkParts = speciesParts[x+1].Split('n');
-
-                for (int i = 0; i < networkParts.GetLength(0); i++)
+                var species = new NEAT.Species
                 {
-                    NEAT.Genotype genotype = new NEAT.Genotype();
+                    topFitness = float.Parse(firstParts[0]),
+                    staleness = int.Parse(firstParts[1])
+                };
 
-                    string network = networkParts[i];
+                NEAT.Population.instance.species.Add(species);
+
+                string[] networkParts = speciesParts[x + 1].Split('n');
+                foreach (string network in networkParts)
+                {
+                    var genotype = new NEAT.Genotype();
+
                     string[] nparts = network.Split('#');
-
-                    string verts = nparts[0];
-                    string[] vparts = verts.Split(',');
-
-                    for (int j = 0; j < vparts.GetLength(0) - 1; j += 2)
+                    string[] vparts = nparts[0].Split(',');
+                    for (int j = 0; j < vparts.Length - 1; j += 2)
                     {
                         int index = int.Parse(vparts[j]);
-                        NEAT.VertexInfo.EType type = (NEAT.VertexInfo.EType)Enum.Parse(typeof(NEAT.VertexInfo.EType), vparts[j + 1]);
-
+                        var type = (NEAT.VertexInfo.EType)Enum.Parse(typeof(NEAT.VertexInfo.EType), vparts[j + 1]);
                         genotype.AddVertex(type, index);
                     }
 
-                    string edges = nparts[1];
-                    string[] eparts = edges.Split(',');
-
-                    for (int j = 0; j < eparts.GetLength(0) - 1; j += 5)
+                    string[] eparts = nparts[1].Split(',');
+                    for (int j = 0; j < eparts.Length - 1; j += 5)
                     {
                         int source = int.Parse(eparts[j]);
                         int destination = int.Parse(eparts[j + 1]);
@@ -247,11 +233,12 @@ namespace Monopoly
                         genotype.AddEdge(source, destination, weight, enabled, innovation);
                     }
 
-                    NEAT.Population.instance.species[NEAT.Population.instance.species.Count - 1].members.Add(genotype);
+                    species.members.Add(genotype);
                     NEAT.Population.instance.genetics.Add(genotype);
                 }
             }
 
+            // Finalize population structure
             NEAT.Population.instance.InscribePopulation();
         }
     }
