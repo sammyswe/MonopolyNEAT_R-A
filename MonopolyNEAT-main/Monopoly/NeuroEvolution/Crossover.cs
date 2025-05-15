@@ -86,24 +86,26 @@ namespace NEAT // Declares namespace NEAT
         public Crossover() // Constructor for the Crossover class
         {
            
-        }
+        }//this is empty because the constructor is required to make an instance of the class even though there is no special
+        //setup for the class.
 
         public Genotype ProduceOffspring(Genotype first, Genotype second) // Create a new genotype by crossing two parents
         {
-            List<EdgeInfo> copy_first = new List<EdgeInfo>(); // Copy of first parent's edges
-            List<EdgeInfo> copy_second = new List<EdgeInfo>(); // Copy of second parent's edges
+            List<EdgeInfo> copy_first = new List<EdgeInfo>(); // Create list to store all the edges of both genotypes
+            List<EdgeInfo> copy_second = new List<EdgeInfo>(); 
 
             copy_first.AddRange(first.edges); // Copy all edges from first
             copy_second.AddRange(second.edges); // Copy all edges from second
 
-            List<EdgeInfo> match_first = new List<EdgeInfo>(); // Matching edges from first
-            List<EdgeInfo> match_second = new List<EdgeInfo>(); // Matching edges from second
+            List<EdgeInfo> match_first = new List<EdgeInfo>(); // Storing the matching edges from both lists. We keep two lists here even though the 
+            List<EdgeInfo> match_second = new List<EdgeInfo>(); // contents will have the same edges because we need to be able to store
+                                                                // that they may have different weights/enabled flags.
 
-            List<EdgeInfo> disjoint_first = new List<EdgeInfo>(); // Disjoint genes from first
-            List<EdgeInfo> disjoint_second = new List<EdgeInfo>(); // Disjoint genes from second
+            List<EdgeInfo> disjoint_first = new List<EdgeInfo>(); // Disjoint genes are non matching genes in the middle (smaller than comparison threshold.)
+            List<EdgeInfo> disjoint_second = new List<EdgeInfo>(); // Create a list of disjoint genes for both genotypes (will fill later)
 
-            List<EdgeInfo> excess_first = new List<EdgeInfo>(); // Excess genes from first
-            List<EdgeInfo> excess_second = new List<EdgeInfo>(); // Excess genes from second
+            List<EdgeInfo> excess_first = new List<EdgeInfo>(); // Excess genes are non matching genes on the end of a genotype (greater than comparison threshold)
+            List<EdgeInfo> excess_second = new List<EdgeInfo>(); // Create a list of excess genes for both genotypes (will fill later)
 
             int genes_first = first.edges.Count; // Total edge count in first
             int genes_second = second.edges.Count; // Total edge count in second
@@ -111,14 +113,14 @@ namespace NEAT // Declares namespace NEAT
             int invmax_first = first.edges[first.edges.Count - 1].innovation; // Max innovation number from first
             int invmax_second = second.edges[second.edges.Count - 1].innovation; // Max innovation number from second
 
-            int invmin = invmax_first > invmax_second ? invmax_second : invmax_first; // Lower of the two max innovation numbers
+            int invmin = invmax_first > invmax_second ? invmax_second : invmax_first; // This finds the comparison threshold (lower of the two innovation numbers)
 
             for (int i = 0; i < genes_first; i++) // Loop over each edge in first
             {
                 for (int j = 0; j < genes_second; j++) // Loop over each edge in second
                 {
-                    EdgeInfo info_first = copy_first[i]; // Edge from first
-                    EdgeInfo info_second = copy_second[j]; // Edge from second
+                    EdgeInfo info_first = copy_first[i]; // Populates the list of unmatched genes
+                    EdgeInfo info_second = copy_second[j]; // genes will be removed when they are found to match
 
                     //matching genes
                     if (info_first.innovation == info_second.innovation) // If innovation numbers match
@@ -137,11 +139,13 @@ namespace NEAT // Declares namespace NEAT
                 }
             }
 
-            for (int i = 0; i < copy_first.Count; i++) // Remaining unmatched in first
+            //continue from here.
+
+            for (int i = 0; i < copy_first.Count; i++) // Assign unmatched genes to either disjoint or excess in first genotype
             {
-                if (copy_first[i].innovation > invmin) // Higher than other parent's max
+                if (copy_first[i].innovation > invmin) // Check vs comparison threshold
                 {
-                    excess_first.Add(copy_first[i]); // Considered excess
+                    excess_first.Add(copy_first[i]); // Considered excess genes (on the end)
                 }
                 else
                 {
@@ -149,7 +153,7 @@ namespace NEAT // Declares namespace NEAT
                 }
             }
 
-            for (int i = 0; i < copy_second.Count; i++) // Remaining unmatched in second
+            for (int i = 0; i < copy_second.Count; i++) // Assign unmatched genes to either disjoint or excess in second genotype
             {
                 if (copy_second[i].innovation > invmin) // Higher than other parent's max
                 {
@@ -161,25 +165,25 @@ namespace NEAT // Declares namespace NEAT
                 }
             }
 
-            Genotype child = new Genotype(); // Create new child genotype
+            Genotype child = new Genotype(); // Create new genotype called child
 
-            int matching = match_first.Count; // Number of matching edges
+            int matching = match_first.Count; // Number of matching edges (the match_first and match_second will be the same)
 
             for (int i = 0; i < matching; i++) // Loop over matches
             {
-                int roll = RNG.instance.gen.Next(0, 2); // Random 0 or 1
+                int roll = RNG.instance.gen.Next(0, 2); // 0 is first, 1 is second
                 
-                if (roll == 0 || !match_second[i].enabled) // Choose from first or use disabled from second
+                if (roll == 0 || !match_second[i].enabled) // If the edge is disabled in the second or we roll a 0, then we copy the egde from parent 1
                 {
                     child.AddEdge(match_first[i].source, match_first[i].destination, match_first[i].weight, match_first[i].enabled, match_first[i].innovation); // Add edge from first
                 }
-                else
+                else //otherwise we copy the edge from the second.
                 {
-                    child.AddEdge(match_second[i].source, match_second[i].destination, match_second[i].weight, match_second[i].enabled, match_second[i].innovation); // Add edge from second
+                    child.AddEdge(match_second[i].source, match_second[i].destination, match_second[i].weight, match_second[i].enabled, match_second[i].innovation); // 
                 }
             }
 
-            for (int i = 0; i < disjoint_first.Count; i++) // Add all disjoint genes from first
+            for (int i = 0; i < disjoint_first.Count; i++) // Add all disjoint genes from first. We only take disjoint and excess genes from the most fit parent.
             {
                 child.AddEdge(disjoint_first[i].source, disjoint_first[i].destination, disjoint_first[i].weight, disjoint_first[i].enabled, disjoint_first[i].innovation);
             }
@@ -191,21 +195,21 @@ namespace NEAT // Declares namespace NEAT
 
             child.SortEdges(); // Sort the child’s edges by innovation number
 
-            List<int> ends = new List<int>(); // List to track non-hidden vertices
+            List<int> ends = new List<int>(); // Initialise empty list to track non-hidden vertices
 
             int vertexCount = first.vertices.Count; // Count of vertices in first
 
-            for (int i = 0; i < first.vertices.Count; i++) // Loop through all vertices
+            for (int i = 0; i < first.vertices.Count; i++) // Loop through all vertices in first
             {
                 VertexInfo vertex = first.vertices[i]; // Get vertex
 
-                if (vertex.type == VertexInfo.EType.HIDDEN) // Stop at hidden
+                if (vertex.type == VertexInfo.EType.HIDDEN) // If we reach a hidden vertex, exit the for loop
                 {
                     break; // Hidden layer vertices come later
                 }
-
-                ends.Add(vertex.index); // Add to visible list
-                child.AddVertex(vertex.type, vertex.index); // Add to child
+                //if the vertex is not hidden
+                ends.Add(vertex.index); // Add to list of visible vertices
+                child.AddVertex(vertex.type, vertex.index); // Add the vertex to the child genotype
             }
 
             AddUniqueVertices(child, ends); // Add all hidden nodes
@@ -217,20 +221,20 @@ namespace NEAT // Declares namespace NEAT
 
         public void AddUniqueVertices(Genotype genotype, List<int> ends) // Adds hidden nodes to a genotype
         {
-            List<int> unique = new List<int>(); // Unique hidden vertex list
+            List<int> unique = new List<int>(); // initialise empty list to store hidden vertices
 
-            int edgeCount = genotype.edges.Count; // Total number of edges
+            int edgeCount = genotype.edges.Count; // We will populate the vertices from the sorted edge list we already have. 
 
             for (int i = 0; i < edgeCount; i++) // Loop through edges
             {
                 EdgeInfo info = genotype.edges[i]; // Get edge
 
-                if (!ends.Contains(info.source) && !unique.Contains(info.source)) // Unique hidden source
-                {
-                    unique.Add(info.source);
+                if (!ends.Contains(info.source) && !unique.Contains(info.source)) // If the source isn't already known (we have added input/output nodes)
+                { //and not already added to the vertices list
+                    unique.Add(info.source); //Add the source to the vertex list
                 }
 
-                if (!ends.Contains(info.destination) && !unique.Contains(info.destination)) // Unique hidden destination
+                if (!ends.Contains(info.destination) && !unique.Contains(info.destination)) // Do the same for the destination
                 {
                     unique.Add(info.destination);
                 }
@@ -238,7 +242,7 @@ namespace NEAT // Declares namespace NEAT
 
             int uniques = unique.Count; // Count of unique hidden nodes
 
-            for (int i = 0; i < uniques; i++) // Add them all
+            for (int i = 0; i < uniques; i++) // Add them all to the instance of the child. 
             {
                 genotype.AddVertex(VertexInfo.EType.HIDDEN, unique[i]);
             }
@@ -246,20 +250,20 @@ namespace NEAT // Declares namespace NEAT
 
         public float SpeciationDistance(Genotype first, Genotype second) // Measures distance between two genotypes
         {
-            List<EdgeInfo> copy_first = new List<EdgeInfo>(); // Copy of first's edges
-            List<EdgeInfo> copy_second = new List<EdgeInfo>(); // Copy of second's edges
+            List<EdgeInfo> copy_first = new List<EdgeInfo>(); // Empty list to store first parent edges
+            List<EdgeInfo> copy_second = new List<EdgeInfo>(); // Empty list to store second parent edges
 
-            copy_first.AddRange(first.edges); // Populate copies
+            copy_first.AddRange(first.edges); // Populate lists
             copy_second.AddRange(second.edges);
 
-            List<EdgeInfo> match_first = new List<EdgeInfo>(); // Matching edges from first
-            List<EdgeInfo> match_second = new List<EdgeInfo>(); // Matching edges from second
+            List<EdgeInfo> match_first = new List<EdgeInfo>(); // Matching edges from the parents (these two lists will be the same nodes)
+            List<EdgeInfo> match_second = new List<EdgeInfo>(); // They may have different weights, enablement settings.
 
-            List<EdgeInfo> disjoint_first = new List<EdgeInfo>(); // Disjoint edges from first
-            List<EdgeInfo> disjoint_second = new List<EdgeInfo>(); // Disjoint edges from second
+            List<EdgeInfo> disjoint_first = new List<EdgeInfo>(); // Empty list to store disjoint edges from the first
+            List<EdgeInfo> disjoint_second = new List<EdgeInfo>(); // Empty list to store disjoint edges from the second
 
-            List<EdgeInfo> excess_first = new List<EdgeInfo>(); // Excess edges from first
-            List<EdgeInfo> excess_second = new List<EdgeInfo>(); // Excess edges from second
+            List<EdgeInfo> excess_first = new List<EdgeInfo>(); // Empty list to store excess edges from the first
+            List<EdgeInfo> excess_second = new List<EdgeInfo>(); // Empty list to store excess edges from the second
 
             int genes_first = first.edges.Count; // Edge count for first
             int genes_second = second.edges.Count; // Edge count for second
@@ -267,11 +271,11 @@ namespace NEAT // Declares namespace NEAT
             int invmax_first = first.edges[first.edges.Count - 1].innovation; // Max innovation in first
             int invmax_second = second.edges[second.edges.Count - 1].innovation; // Max innovation in second
 
-            int invmin = invmax_first > invmax_second ? invmax_second : invmax_first; // Lower of two max innovation values
+            int invmin = invmax_first > invmax_second ? invmax_second : invmax_first; // Calculate comparison threshold 
 
             float diff = 0.0f; // Sum of weight differences
 
-            for (int i = 0; i < genes_first; i++) // Check for matching edges
+            for (int i = 0; i < genes_first; i++) // Check for matching edges to calculate weight difference
             {
                 for (int j = 0; j < genes_second; j++)
                 {
@@ -284,21 +288,23 @@ namespace NEAT // Declares namespace NEAT
                         float weightDiff = Math.Abs(info_first.weight - info_second.weight); // Weight difference
                         diff += weightDiff; // Accumulate
 
-                        match_first.Add(info_first); // Track match
+                        match_first.Add(info_first); // Add both to the matches list
                         match_second.Add(info_second);
 
-                        copy_first.Remove(info_first); // Remove matched
-                        copy_second.Remove(info_second);
+                        copy_first.Remove(info_first); // Remove matched nodes from copy list so after we are done
+                        copy_second.Remove(info_second); //we will have the list of unmatched nodes
 
                         i--; // Adjust index due to removal
                         genes_first--;
                         genes_second--;
-                        break; // Stop inner loop
+                        break; // we break the inner loop here because we are moving onto the next 
+                        //edge from the first parent. We incrementally check each edge in parent 1
+                        //looping through all edges in parent 2 to check for a match.
                     }
                 }
             }
 
-            for (int i = 0; i < copy_first.Count; i++) // Separate excess/disjoint in first
+            for (int i = 0; i < copy_first.Count; i++) // Separate excess/disjoint in first parent
             {
                 if (copy_first[i].innovation > invmin)
                 {
@@ -310,7 +316,7 @@ namespace NEAT // Declares namespace NEAT
                 }
             }
 
-            for (int i = 0; i < copy_second.Count; i++) // Separate excess/disjoint in second
+            for (int i = 0; i < copy_second.Count; i++) // Separate excess/disjoint in second parent
             {
                 if (copy_second[i].innovation > invmin)
                 {
@@ -327,6 +333,9 @@ namespace NEAT // Declares namespace NEAT
             int excess = excess_first.Count + excess_second.Count; // Total excess
 
             int n = Math.Max(first.edges.Count, second.edges.Count); // Normalize by larger genome
+            // we do this to make the disjoint and excess gene count relative to the size of the network
+            //a difference of 4 edges means a lot in a network of 10 edges, but a lot less in a network
+            //with a thousand edges.
 
             float E = excess / (float)n; // Normalized excess
             float D = disjoint / (float)n; // Normalized disjoint
