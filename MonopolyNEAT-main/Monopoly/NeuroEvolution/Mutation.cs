@@ -95,9 +95,10 @@ namespace NEAT // Define the NEAT namespace
 
         //continue from here.
 
-        public int RegisterMarking(EdgeInfo info) // Assigns an innovation number for a new edge if not already existing
+        public int RegisterMarking(EdgeInfo info) // Assigns an innovation number for a new edge if not already existing. Returns innovation number
+        //of inputted edge.
         {
-            int count = historical.Count; // Get current number of markings
+            int count = historical.Count; // Get current number of markings (how many innovations already exist)
 
             for (int i = 0; i < count; i++) // Check if this mutation already exists
             {
@@ -109,193 +110,196 @@ namespace NEAT // Define the NEAT namespace
                 }
             }
 
+            //If the innovation doesn't already exist,
+
             Marking creation = new Marking(); // Create new marking
             creation.order = historical.Count; // Assign next innovation number
             creation.source = info.source; // Set source
             creation.destination = info.destination; // Set destination
 
-            historical.Add(creation); // Add to history
+            historical.Add(creation); // Add to history (the innovation tracker)
 
-            return historical.Count - 1; // Return the new innovation number
+            return historical.Count - 1; // Return the new innovation number (-1 because it starts from 0)
         }
-
-        public void MutateAll(Genotype genotype) // Perform all possible mutations on a genotype
+        public void MutateAll(Genotype genotype) // This functions rolls an RNG, calling other functions based on whether or not they
+        //fall within the specified probabilities.
         {
-            // Reset mutation probabilities (may not be necessary every time)
-            MUTATE_LINK = 0.2f;
-            MUTATE_NODE = 0.1f;
-            MUTATE_ENABLE = 0.6f;
-            MUTATE_DISABLE = 0.2f;
-            MUTATE_WEIGHT = 2.0f;
+            // Reset mutation probabilities (optional; this overrides any dynamic adjustments)
+            MUTATE_LINK = 0.2f; // Probability of adding a new connection
+            MUTATE_NODE = 0.1f; // Probability of adding a new node (splitting a connection)
+            MUTATE_ENABLE = 0.6f; // Probability of enabling a disabled connection
+            MUTATE_DISABLE = 0.2f; // Probability of disabling an enabled connection
+            MUTATE_WEIGHT = 2.0f; // Number of attempts to mutate weights (can be >1)
 
-            float p = MUTATE_WEIGHT; // Start with weight mutation
+            float p = MUTATE_WEIGHT; // Start with weight mutation passes
 
-            while (p > 0)
+            while (p > 0) // As long as p > 0, attempt weight mutation
             {
-                float roll = (float)RNG.instance.gen.NextDouble(); // Random roll
+                float roll = (float)RNG.instance.gen.NextDouble(); // Generate a random float between 0 and 1
 
-                if (roll < p)
+                if (roll < p) // If roll is within mutation probability
                 {
-                    MutateWeight(genotype); // Possibly mutate a weight
+                    MutateWeight(genotype); // Apply a weight mutation to a random edge
                 }
 
-                p--; // Decrement mutation probability
+                p--; // Decrease p by 1 (loop is repeated MUTATE_WEIGHT times)
             }
 
-            p = MUTATE_LINK; // Now try adding links
+            p = MUTATE_LINK; // Set p to probability of link mutation
 
-            while (p > 0)
+            while (p > 0) // Repeat link mutation attempts
             {
-                float roll = (float)RNG.instance.gen.NextDouble();
+                float roll = (float)RNG.instance.gen.NextDouble(); // Roll again
 
-                if (roll < p)
+                if (roll < p) // If roll allows mutation
                 {
-                    MutateLink(genotype); // Possibly add link
+                    MutateLink(genotype); // Try to add a new connection
                 }
 
-                p--;
+                p--; // Decrease mutation probability counter
             }
 
-            p = MUTATE_NODE; // Now try adding nodes
+            p = MUTATE_NODE; // Set p to probability of node mutation
 
-            while (p > 0)
+            while (p > 0) // Repeat node mutation attempts
             {
-                float roll = (float)RNG.instance.gen.NextDouble();
+                float roll = (float)RNG.instance.gen.NextDouble(); // Roll again
 
-                if (roll < p)
+                if (roll < p) // If roll allows mutation
                 {
-                    MutateNode(genotype); // Possibly add node
+                    MutateNode(genotype); // Try to split an edge by inserting a new node
                 }
 
-                p--;
+                p--; // Decrease mutation probability counter
             }
 
-            p = MUTATE_DISABLE; // Now try disabling connections
+            p = MUTATE_DISABLE; // Set p to probability of disabling a connection
 
-            while (p > 0)
+            while (p > 0) // Repeat disable attempts
             {
-                float roll = (float)RNG.instance.gen.NextDouble();
+                float roll = (float)RNG.instance.gen.NextDouble(); // Roll again
 
-                if (roll < p)
+                if (roll < p) // If roll allows mutation
                 {
-                    MutateDisable(genotype); // Possibly disable edge
+                    MutateDisable(genotype); // Disable a random enabled edge
                 }
 
-                p--;
+                p--; // Decrease mutation probability counter
             }
 
-            p = MUTATE_ENABLE; // Now try enabling connections
+            p = MUTATE_ENABLE; // Set p to probability of enabling a connection
 
-            while (p > 0)
+            while (p > 0) // Repeat enable attempts
             {
-                float roll = (float)RNG.instance.gen.NextDouble();
+                float roll = (float)RNG.instance.gen.NextDouble(); // Roll again
 
-                if (roll < p)
+                if (roll < p) // If roll allows mutation
                 {
-                    MutateEnable(genotype); // Possibly enable edge
+                    MutateEnable(genotype); // Enable a random disabled edge
                 }
 
-                p--;
+                p--; // Decrease mutation probability counter
             }
-
         }
 
         public void MutateLink(Genotype genotype) // Attempt to add a new connection between two nodes
         {
-            int vertexCount = genotype.vertices.Count; // Number of nodes
-            int edgeCount = genotype.edges.Count; // Number of connections
+            int vertexCount = genotype.vertices.Count; // Count how many nodes the network currently has
+            int edgeCount = genotype.edges.Count; // Count how many edges (connections) exist
 
-            List<EdgeInfo> potential = new List<EdgeInfo>(); // All valid new connections
-            
-            // Try all possible pairs of vertices
-            for (int i = 0; i < vertexCount; i++)
+            List<EdgeInfo> potential = new List<EdgeInfo>(); // Prepare a list to store valid new connections
+
+            // Try all possible pairs of vertices to see if a valid connection can be made
+            for (int i = 0; i < vertexCount; i++) // Loop through all possible source nodes
             {
-                for (int j = 0; j < vertexCount; j++)
+                for (int j = 0; j < vertexCount; j++) // Loop through all possible destination nodes
                 {
-                    int source = genotype.vertices[i].index; // Get source node
-                    int destination = genotype.vertices[j].index; // Get destination node
+                    int source = genotype.vertices[i].index; // Get source node index
+                    int destination = genotype.vertices[j].index; // Get destination node index
 
-                    VertexInfo.EType t1 = genotype.vertices[i].type; // Source type
-                    VertexInfo.EType t2 = genotype.vertices[j].type; // Destination type
+                    VertexInfo.EType t1 = genotype.vertices[i].type; // Get type of source node
+                    VertexInfo.EType t2 = genotype.vertices[j].type; // Get type of destination node
 
-                    if (t1 == VertexInfo.EType.OUTPUT || t2 == VertexInfo.EType.INPUT) // Avoid backward connections
+                    if (t1 == VertexInfo.EType.OUTPUT || t2 == VertexInfo.EType.INPUT) // Prevent creating backward or invalid connections
                     {
-                        continue;
+                        continue; // Skip this pair
                     }
 
-                    if (source == destination) // Prevent self-loops
+                    if (source == destination) // Prevent self-connections (a node connecting to itself)
                     {
-                        continue;
+                        continue; // Skip this pair
                     }
 
-                    bool search = false; // To check if this edge already exists
+                    bool search = false; // Flag to check if edge already exists
 
-                    for (int k = 0; k < edgeCount; k++)
+                    for (int k = 0; k < edgeCount; k++) // Loop through all current edges
                     {
-                        EdgeInfo edge = genotype.edges[k];
+                        EdgeInfo edge = genotype.edges[k]; // Get each edge
 
-                        if (edge.source == source && edge.destination == destination) // If edge exists
+                        if (edge.source == source && edge.destination == destination) // If the edge already exists
                         {
-                            search = true;
-                            break;
+                            search = true; // Mark that the edge is found
+                            break; // No need to keep searching
                         }
                     }
 
-                    if (!search) // If edge doesn't exist yet
+                    if (!search) // If the edge does not exist yet
                     {
-                        float weight = (float)RNG.instance.gen.NextDouble() * 4.0f - 2.0f; // Random weight (-2 to 2)
-                        EdgeInfo creation = new EdgeInfo(source, destination, weight, true); // Create new edge
+                        float weight = (float)RNG.instance.gen.NextDouble() * 4.0f - 2.0f; // Generate a random weight between -2 and 2
+                        EdgeInfo creation = new EdgeInfo(source, destination, weight, true); // Create a new edge with that weight and enable it
 
-                        potential.Add(creation); // Add to candidate list
+                        potential.Add(creation); // Add the new edge to the list of potential mutations
                     }
                 }
             }
 
-            if (potential.Count <= 0) // If no valid new connections
+            if (potential.Count <= 0) // If there are no valid new connections to make
             {
-                return;
+                return; // Exit the function early
             }
 
-            int selection = RNG.instance.gen.Next(0, potential.Count); // Pick one at random
+            int selection = RNG.instance.gen.Next(0, potential.Count); // Choose one potential new edge at random
 
-            EdgeInfo mutation = potential[selection]; // Get selected edge
-            mutation.innovation = RegisterMarking(mutation); // Assign innovation number
+            EdgeInfo mutation = potential[selection]; // Select the edge
+            mutation.innovation = RegisterMarking(mutation); // Assign it an innovation number (track in history)
 
-            genotype.AddEdge(mutation.source, mutation.destination, mutation.weight, mutation.enabled, mutation.innovation); // Add to genotype
+            genotype.AddEdge(mutation.source, mutation.destination, mutation.weight, mutation.enabled, mutation.innovation); // Add this new edge to the genotype
         }
 
-        public void MutateNode(Genotype genotype) // Insert a node in the middle of an existing edge
+
+        public void MutateNode(Genotype genotype) // Insert a new node by splitting an existing edge
         {
-            int edgeCount = genotype.edges.Count; // Total edges
+            int edgeCount = genotype.edges.Count; // Get the total number of edges in the genotype
 
-            int selection = RNG.instance.gen.Next(0, edgeCount); // Pick random edge
+            int selection = RNG.instance.gen.Next(0, edgeCount); // Select a random edge index
 
-            EdgeInfo edge = genotype.edges[selection]; // Get edge
+            EdgeInfo edge = genotype.edges[selection]; // Get the selected edge
 
-            if (edge.enabled == false) // Skip if already disabled
+            if (edge.enabled == false) // If the selected edge is already disabled, skip mutation
             {
-                return;
+                return; // Exit the function
             }
 
-            edge.enabled = false; // Disable original edge
+            edge.enabled = false; // Disable the original edge (we're about to split it)
 
-            int vertex_new = genotype.vertices[genotype.vertices.Count - 1].index + 1; // New node ID
+            int vertex_new = genotype.vertices[genotype.vertices.Count - 1].index + 1; // Create a new unique index for the new node
 
-            VertexInfo vertex = new VertexInfo(VertexInfo.EType.HIDDEN, vertex_new); // Create new hidden node
+            VertexInfo vertex = new VertexInfo(VertexInfo.EType.HIDDEN, vertex_new); // Create a new hidden node with the new index
 
-            EdgeInfo first = new EdgeInfo(edge.source, vertex_new, 1.0f, true); // New edge from source to new node
-            EdgeInfo second = new EdgeInfo(vertex_new, edge.destination, edge.weight, true); // New edge from new node to destination
+            EdgeInfo first = new EdgeInfo(edge.source, vertex_new, 1.0f, true); // Create a new edge from the original source to the new node
+            EdgeInfo second = new EdgeInfo(vertex_new, edge.destination, edge.weight, true); // Create a new edge from the new node to the original destination
 
-            first.innovation = RegisterMarking(first); // Assign innovations
-            second.innovation = RegisterMarking(second);
+            first.innovation = RegisterMarking(first); // Assign an innovation number to the first new edge
+            second.innovation = RegisterMarking(second); // Assign an innovation number to the second new edge
 
-            genotype.AddVertex(vertex.type, vertex.index); // Add new node
+            genotype.AddVertex(vertex.type, vertex.index); // Add the new hidden node to the genotype
 
-            genotype.AddEdge(first.source, first.destination, first.weight, first.enabled, first.innovation); // Add new edges
-            genotype.AddEdge(second.source, second.destination, second.weight, second.enabled, second.innovation);
+            genotype.AddEdge(first.source, first.destination, first.weight, first.enabled, first.innovation); // Add the first new edge to the genotype
+            genotype.AddEdge(second.source, second.destination, second.weight, second.enabled, second.innovation); // Add the second new edge to the genotype
         }
 
-        public void MutateEnable(Genotype genotype) // Enable a disabled edge
+
+        public void MutateEnable(Genotype genotype) // Enable a disabled edge. Create list of candidates(disabled edges) and randomly select one to enable
         {
             int edgeCount = genotype.edges.Count; // Total edges
 
@@ -320,7 +324,7 @@ namespace NEAT // Define the NEAT namespace
             edge.enabled = true; // Enable it
         }
 
-        public void MutateDisable(Genotype genotype) // Disable an enabled edge
+        public void MutateDisable(Genotype genotype) // Disable an enabled edge. Create list of candidates(enabled edges) and randomly select one to disable
         {
             int edgeCount = genotype.edges.Count;
 
@@ -363,7 +367,8 @@ namespace NEAT // Define the NEAT namespace
             }
         }
 
-        public void MutateWeightShift(EdgeInfo edge, float step) // Slightly adjust a weight
+        public void MutateWeightShift(EdgeInfo edge, float step) // Slightly adjust a weight. Step is set to 0.1, so this will change the weight
+        //by either +0.05 or -0.05
         {
             float scalar = (float)RNG.instance.gen.NextDouble() * step - step * 0.5f; // Small random shift
             edge.weight += scalar; // Apply shift
