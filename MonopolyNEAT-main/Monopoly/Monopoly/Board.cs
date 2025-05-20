@@ -123,7 +123,7 @@ namespace MONOPOLY
         public static int[] TRAIN_PENALTIES = new int[4] { 25, 50, 100, 200 };
 
         // What kind of tile each board index is
-        public static ETile[] TYPES = new ETile[40] 
+        public static ETile[] TYPES = new ETile[40]
         {ETile.NONE, ETile.PROPERTY, ETile.CHEST, ETile.PROPERTY, ETile.TAX, ETile.TRAIN, ETile.PROPERTY, ETile.CHANCE, ETile.PROPERTY, ETile.PROPERTY, ETile.NONE,
          ETile.PROPERTY, ETile.UTILITY, ETile.PROPERTY, ETile.PROPERTY, ETile.TRAIN, ETile.PROPERTY, ETile.CHEST, ETile.PROPERTY, ETile.PROPERTY, ETile.NONE,
          ETile.PROPERTY, ETile.CHANCE, ETile.PROPERTY, ETile.PROPERTY, ETile.TRAIN, ETile.PROPERTY, ETile.PROPERTY, ETile.UTILITY, ETile.PROPERTY, ETile.JAIL,
@@ -135,8 +135,8 @@ namespace MONOPOLY
         // House build costs for each property set (used in building houses evenly)
         public static int[] BUILD = new int[16] { 50, 50, 50, 50, 100, 100, 100, 100, 150, 150, 150, 150, 200, 200, 200, 200 };
 
-                public static int[,] SETS = new int[8, 3]
-        {{1, 3, -1},
+        public static int[,] SETS = new int[8, 3]
+{{1, 3, -1},
          {6, 8, 9},
          {11, 13, 14},
          {16, 18, 19},
@@ -236,7 +236,7 @@ namespace MONOPOLY
             chance.Add(new CardEntry(ECard.CHAIRMAN, 0));
             chance.Add(new CardEntry(ECard.REWARD, 150));
             chance = random.Shuffle(chance);
-            
+
 
 
             // Load and shuffle CHEST cards
@@ -259,7 +259,7 @@ namespace MONOPOLY
             chest = random.Shuffle(chest);
 
         }
-               public EOutcome Step()
+        public EOutcome Step()
         {
             // Entry point for each turn; delegates to the correct game mode
             switch (mode)
@@ -460,7 +460,7 @@ namespace MONOPOLY
             }
         }
 
-              public void BeforeTurn()
+        public void BeforeTurn()
         {
             // Skip logic for retired players
             if (players[turn].state == Player.EState.RETIRED)
@@ -602,12 +602,13 @@ namespace MONOPOLY
             // Trading logic (not shown in detail here)
             // ------------------------------
             Trading();
-        }
+
 
             // ------------------------------
             // Trading logic (not shown in detail here)
             // ------------------------------
             Trading();
+
         }
         public void Trading()
         {
@@ -765,7 +766,7 @@ namespace MONOPOLY
             }
         }
 
-         public void Auction(int index)
+        public void Auction(int index)
         {
             // Track which players are eligible to bid
             bool[] participation = new bool[PLAYER_COUNT];
@@ -881,204 +882,204 @@ namespace MONOPOLY
             ActivateTile();
         }
 
-         public void ActivateTile()
-    {
-        // Get the index of the tile the current player landed on
-        int index = players[turn].position;
-
-        // Get the type of tile based on its index
-        ETile tile = TYPES[index];
-
-        // ----------- PROPERTY TILE LOGIC -----------
-        if (tile == ETile.PROPERTY)
+        public void ActivateTile()
         {
-            // Get the current owner of the property
-            int owner = Owner(index);
+            // Get the index of the tile the current player landed on
+            int index = players[turn].position;
 
-            if (owner == BANK_INDEX) // If the property is unowned
+            // Get the type of tile based on its index
+            ETile tile = TYPES[index];
+
+            // ----------- PROPERTY TILE LOGIC -----------
+            if (tile == ETile.PROPERTY)
             {
-                adapter.SetTurn(turn); // Set the neural network's input to the current turn
-                adapter.SetSelection(index); // Highlight the selected property tile
+                // Get the current owner of the property
+                int owner = Owner(index);
 
-                // Ask the neural network if it wants to buy or auction this property
-                Player.EBuyDecision decision = players[turn].DecideBuy(index);
-
-                if (decision == Player.EBuyDecision.BUY) // If player wants to buy
+                if (owner == BANK_INDEX) // If the property is unowned
                 {
-                    // Check if the player has enough money to buy it
-                    if (players[turn].funds < COSTS[index])
-                    {
-                        Auction(index); // Can't afford it, go to auction instead
-                    }
-                    else
-                    {
-                        Payment(turn, COSTS[index]); // Pay the cost
-                        owners[index] = turn; // Set player as owner of the property
+                    adapter.SetTurn(turn); // Set the neural network's input to the current turn
+                    adapter.SetSelection(index); // Highlight the selected property tile
 
-                        if (original[index] == -1) // If first time being owned
+                    // Ask the neural network if it wants to buy or auction this property
+                    Player.EBuyDecision decision = players[turn].DecideBuy(index);
+
+                    if (decision == Player.EBuyDecision.BUY) // If player wants to buy
+                    {
+                        // Check if the player has enough money to buy it
+                        if (players[turn].funds < COSTS[index])
                         {
-                            original[index] = turn; // Set original owner
+                            Auction(index); // Can't afford it, go to auction instead
                         }
-
-                        players[turn].items.Add(index); // Add property to player's items
-                        adapter.SetOwner(index, turn); // Update the neural network with new ownership
-                    }
-                }
-                else if (decision == Player.EBuyDecision.AUCTION) // If player chooses auction
-                {
-                    Auction(index); // Send property to auction
-                }
-            }
-            else if (owner == turn) // If player landed on their own property
-            {
-                // No action needed
-            }
-            else if (!mortgaged[index]) // Property is owned by someone else and not mortgaged
-            {
-                // Get the rent value and pay the property owner
-                int rent = PROPERTY_PENALTIES[property[index], houses[index]];
-                PaymentToPlayer(turn, owner, rent); // Transfer rent
-            }
-        }
-
-        // ----------- TRAIN TILE LOGIC -----------
-        else if (tile == ETile.TRAIN)
-        {
-            // Get owner of train tile
-            int owner = Owner(index);
-
-            if (owner == BANK_INDEX) // If unowned
-            {
-                adapter.SetTurn(turn); // Set current player turn
-                adapter.SetSelection(index); // Highlight train tile
-
-                // Ask if player wants to buy or auction the tile
-                Player.EBuyDecision decision = players[turn].DecideBuy(index);
-
-                if (decision == Player.EBuyDecision.BUY) // Chose to buy
-                {
-                    if (players[turn].funds < COSTS[index]) // Can't afford it
-                    {
-                        Auction(index); // Auction instead
-                    }
-                    else
-                    {
-                        Payment(turn, COSTS[index]); // Pay the cost
-                        owners[index] = turn; // Assign ownership
-
-                        if (original[index] == -1) // If never owned
+                        else
                         {
-                            original[index] = turn; // Mark original owner
-                        }
+                            Payment(turn, COSTS[index]); // Pay the cost
+                            owners[index] = turn; // Set player as owner of the property
 
-                        players[turn].items.Add(index); // Add to player's owned items
-                        adapter.SetOwner(index, turn); // Update ownership in NN adapter
+                            if (original[index] == -1) // If first time being owned
+                            {
+                                original[index] = turn; // Set original owner
+                            }
+
+                            players[turn].items.Add(index); // Add property to player's items
+                            adapter.SetOwner(index, turn); // Update the neural network with new ownership
+                        }
+                    }
+                    else if (decision == Player.EBuyDecision.AUCTION) // If player chooses auction
+                    {
+                        Auction(index); // Send property to auction
                     }
                 }
-                else if (owner == turn) // Landed on own train tile
+                else if (owner == turn) // If player landed on their own property
                 {
                     // No action needed
                 }
-                else if (decision == Player.EBuyDecision.AUCTION) // If chose to auction
+                else if (!mortgaged[index]) // Property is owned by someone else and not mortgaged
                 {
-                    Auction(index); // Auction the tile
+                    // Get the rent value and pay the property owner
+                    int rent = PROPERTY_PENALTIES[property[index], houses[index]];
+                    PaymentToPlayer(turn, owner, rent); // Transfer rent
                 }
             }
-            else if (!mortgaged[index]) // If owned and not mortgaged
+
+            // ----------- TRAIN TILE LOGIC -----------
+            else if (tile == ETile.TRAIN)
             {
-                int trains = CountTrains(owner); // Count number of trains owned by owner
+                // Get owner of train tile
+                int owner = Owner(index);
 
-                if (trains >= 1 && trains <= 4) // Valid number of train tiles
+                if (owner == BANK_INDEX) // If unowned
                 {
-                    int fine = TRAIN_PENALTIES[trains - 1]; // Lookup penalty value
-                    PaymentToPlayer(turn, owner, fine); // Pay the rent to owner
-                }
-            }
-        }
+                    adapter.SetTurn(turn); // Set current player turn
+                    adapter.SetSelection(index); // Highlight train tile
 
-        // ----------- UTILITY TILE LOGIC -----------
-        else if (tile == ETile.UTILITY)
-        {
-            int owner = Owner(index); // Determine the owner
+                    // Ask if player wants to buy or auction the tile
+                    Player.EBuyDecision decision = players[turn].DecideBuy(index);
 
-            if (owner == BANK_INDEX) // Utility is unowned
-            {
-                adapter.SetTurn(turn); // Set current turn for adapter
-                adapter.SetSelectionState(index, 1); // Highlight utility tile
-
-                Player.EBuyDecision decision = players[turn].DecideBuy(index); // Ask neural net for decision
-
-                adapter.SetSelectionState(index, 0); // Unhighlight tile
-
-                if (decision == Player.EBuyDecision.BUY) // Player chooses to buy
-                {
-                    if (players[turn].funds < COSTS[index]) // Not enough money
+                    if (decision == Player.EBuyDecision.BUY) // Chose to buy
                     {
-                        Auction(index); // Auction the utility
-                    }
-                    else
-                    {
-                        Payment(turn, COSTS[index]); // Deduct money
-                        owners[index] = turn; // Set player as owner
-
-                        if (original[index] == -1) // First time owned
+                        if (players[turn].funds < COSTS[index]) // Can't afford it
                         {
-                            original[index] = turn;
+                            Auction(index); // Auction instead
                         }
+                        else
+                        {
+                            Payment(turn, COSTS[index]); // Pay the cost
+                            owners[index] = turn; // Assign ownership
 
-                        players[turn].items.Add(index); // Add to inventory
-                        adapter.SetOwner(index, turn); // Update neural network state
+                            if (original[index] == -1) // If never owned
+                            {
+                                original[index] = turn; // Mark original owner
+                            }
+
+                            players[turn].items.Add(index); // Add to player's owned items
+                            adapter.SetOwner(index, turn); // Update ownership in NN adapter
+                        }
+                    }
+                    else if (owner == turn) // Landed on own train tile
+                    {
+                        // No action needed
+                    }
+                    else if (decision == Player.EBuyDecision.AUCTION) // If chose to auction
+                    {
+                        Auction(index); // Auction the tile
                     }
                 }
-                else if (decision == Player.EBuyDecision.AUCTION) // Player chooses auction
+                else if (!mortgaged[index]) // If owned and not mortgaged
                 {
-                    Auction(index);
+                    int trains = CountTrains(owner); // Count number of trains owned by owner
+
+                    if (trains >= 1 && trains <= 4) // Valid number of train tiles
+                    {
+                        int fine = TRAIN_PENALTIES[trains - 1]; // Lookup penalty value
+                        PaymentToPlayer(turn, owner, fine); // Pay the rent to owner
+                    }
                 }
             }
-            else if (owner == turn) // Player owns the utility
-            {
-                // No action needed
-            }
-            else if (!mortgaged[index]) // Utility is active and not mortgaged
-            {
-                int utilities = CountUtilities(owner); // Count number of utilities owned
 
-                if (utilities >= 1 && utilities <= 2)
+            // ----------- UTILITY TILE LOGIC -----------
+            else if (tile == ETile.UTILITY)
+            {
+                int owner = Owner(index); // Determine the owner
+
+                if (owner == BANK_INDEX) // Utility is unowned
                 {
-                    int fine = UTILITY_PENALTIES[utilities - 1] * last_roll; // Calculate rent
-                    PaymentToPlayer(turn, owner, fine); // Pay the rent
+                    adapter.SetTurn(turn); // Set current turn for adapter
+                    adapter.SetSelectionState(index, 1); // Highlight utility tile
+
+                    Player.EBuyDecision decision = players[turn].DecideBuy(index); // Ask neural net for decision
+
+                    adapter.SetSelectionState(index, 0); // Unhighlight tile
+
+                    if (decision == Player.EBuyDecision.BUY) // Player chooses to buy
+                    {
+                        if (players[turn].funds < COSTS[index]) // Not enough money
+                        {
+                            Auction(index); // Auction the utility
+                        }
+                        else
+                        {
+                            Payment(turn, COSTS[index]); // Deduct money
+                            owners[index] = turn; // Set player as owner
+
+                            if (original[index] == -1) // First time owned
+                            {
+                                original[index] = turn;
+                            }
+
+                            players[turn].items.Add(index); // Add to inventory
+                            adapter.SetOwner(index, turn); // Update neural network state
+                        }
+                    }
+                    else if (decision == Player.EBuyDecision.AUCTION) // Player chooses auction
+                    {
+                        Auction(index);
+                    }
+                }
+                else if (owner == turn) // Player owns the utility
+                {
+                    // No action needed
+                }
+                else if (!mortgaged[index]) // Utility is active and not mortgaged
+                {
+                    int utilities = CountUtilities(owner); // Count number of utilities owned
+
+                    if (utilities >= 1 && utilities <= 2)
+                    {
+                        int fine = UTILITY_PENALTIES[utilities - 1] * last_roll; // Calculate rent
+                        PaymentToPlayer(turn, owner, fine); // Pay the rent
+                    }
                 }
             }
-        }
 
-        // ----------- TAX TILE -----------
-        else if (tile == ETile.TAX)
-        {
-            Payment(turn, COSTS[index]); // Deduct tax from player
-        }
+            // ----------- TAX TILE -----------
+            else if (tile == ETile.TAX)
+            {
+                Payment(turn, COSTS[index]); // Deduct tax from player
+            }
 
-        // ----------- CHANCE TILE -----------
-        else if (tile == ETile.CHANCE)
-        {
-            DrawChance(); // Draw a chance card and execute effect
-        }
+            // ----------- CHANCE TILE -----------
+            else if (tile == ETile.CHANCE)
+            {
+                DrawChance(); // Draw a chance card and execute effect
+            }
 
-        // ----------- CHEST TILE -----------
-        else if (tile == ETile.CHEST)
-        {
-            DrawChest(); // Draw a community chest card and execute effect
-        }
+            // ----------- CHEST TILE -----------
+            else if (tile == ETile.CHEST)
+            {
+                DrawChest(); // Draw a community chest card and execute effect
+            }
 
-        // ----------- JAIL TILE (GO TO JAIL) -----------
-        else if (tile == ETile.JAIL)
-        {
-            players[turn].position = JAIL_INDEX; // Move player directly to jail tile
-            players[turn].doub = 0; // Reset any double roll count
-            players[turn].state = Player.EState.JAIL; // Change state to jail
+            // ----------- JAIL TILE (GO TO JAIL) -----------
+            else if (tile == ETile.JAIL)
+            {
+                players[turn].position = JAIL_INDEX; // Move player directly to jail tile
+                players[turn].doub = 0; // Reset any double roll count
+                players[turn].state = Player.EState.JAIL; // Change state to jail
 
-            adapter.SetJail(turn, 1); // Update adapter to reflect jail status
+                adapter.SetJail(turn, 1); // Update adapter to reflect jail status
+            }
         }
-    }
 
         public void Payment(int owner, int fine)
         {
@@ -1196,7 +1197,7 @@ namespace MONOPOLY
             }
         }
 
-               public void PaymentToPlayer(int owner, int recipient, int fine)
+        public void PaymentToPlayer(int owner, int recipient, int fine)
         {
             // Deduct the fine from the paying player's funds
             players[owner].funds -= fine;
@@ -1492,7 +1493,7 @@ namespace MONOPOLY
             }
         }
 
-              public void DrawChest()
+        public void DrawChest()
         {
             // Get the top card from the Community Chest deck
             CardEntry card = chest[0];
@@ -1587,7 +1588,7 @@ namespace MONOPOLY
             }
         }
 
-             // Handles logic for Chance card: Advance to nearest train, pay double if owned
+        // Handles logic for Chance card: Advance to nearest train, pay double if owned
         public void AdvanceToTrain2()
         {
             // Get current player position
@@ -1740,7 +1741,7 @@ namespace MONOPOLY
 
                         players[turn].items.Add(index); // Add to inventory
                         adapter.SetOwner(index, turn); // Update adapter
-                    }   
+                    }
                 }
                 else if (decision == Player.EBuyDecision.AUCTION)
                 {
@@ -1760,105 +1761,108 @@ namespace MONOPOLY
             }
         }
 
-       public int[] FindSets(int owner)
-{
-    // Create a list to store indices of completed property sets
-    List<int> sets = new List<int>();
-
-    // Get the list of properties the current player owns
-    List<int> items = players[owner].items;
-
-    // Iterate over all defined sets (8 total)
-    for (int i = 0; i < 8; i++)
-    {
-        // Check two-property sets (Brown and Dark Blue)
-        if (i == 0 || i == 7)
+        public int[] FindSets(int owner)
         {
-            // If player owns both properties in the set, add set index
-            if (items.Contains(SETS[i,0]) && items.Contains(SETS[i,1]))
+            // Create a list to store indices of completed property sets
+            List<int> sets = new List<int>();
+
+            // Get the list of properties the current player owns
+            List<int> items = players[owner].items;
+
+            // Iterate over all defined sets (8 total)
+            for (int i = 0; i < 8; i++)
             {
-                sets.Add(i);
+                // Check two-property sets (Brown and Dark Blue)
+                if (i == 0 || i == 7)
+                {
+                    // If player owns both properties in the set, add set index
+                    if (items.Contains(SETS[i, 0]) && items.Contains(SETS[i, 1]))
+                    {
+                        sets.Add(i);
+                    }
+
+                    continue; // Skip checking the third entry (always -1 for two-property sets)
+                }
+
+                // Check three-property sets (e.g., Light Blue, Pink, etc.)
+                if (items.Contains(SETS[i, 0]) && items.Contains(SETS[i, 1]) && items.Contains(SETS[i, 2]))
+                {
+                    sets.Add(i);
+                }
             }
 
-            continue; // Skip checking the third entry (always -1 for two-property sets)
+            // Convert the list of set indices to an array and return it
+            return sets.ToArray();
         }
 
-        // Check three-property sets (e.g., Light Blue, Pink, etc.)
-        if (items.Contains(SETS[i, 0]) && items.Contains(SETS[i, 1]) && items.Contains(SETS[i, 2]))
+        public void BuildHouses(int set, int amount)
         {
-            sets.Add(i);
-        }
-    }
+            // By default assume a 3-property set
+            int last = 2;
 
-    // Convert the list of set indices to an array and return it
-    return sets.ToArray();
-}
-
-public void BuildHouses(int set, int amount)
-{
-    // By default assume a 3-property set
-    int last = 2;
-
-    // Adjust to 2-property set if applicable
-    if (set == 0 || set == 7)
-    {
-        last = 1;
-    }
-
-    // Build houses one at a time
-    for (int i = 0; i < amount; i++)
-    {
-        // Find the property with the least number of houses (backwards search)
-        int bj = last;
-
-        for (int j = last - 1; j >= 0; j--)
-        {
-            // Track the property with fewer houses to maintain building balance
-            if (houses[SETS[set, bj]] > houses[SETS[set, j]])
+            // Adjust to 2-property set if applicable
+            if (set == 0 || set == 7)
             {
-                bj = j;
+                last = 1;
             }
-        }
 
-        // Increment house count on the selected property
-        houses[SETS[set, bj]]++;
-
-        // Inform the adapter about the updated house count
-        adapter.SetHouse(SETS[set, bj], houses[SETS[set, bj]]);
-    }
-}
-
-public void SellHouses(int set, int amount)
-{
-    // By default assume a 3-property set
-    int last = 2;
-
-    // Adjust to 2-property set if applicable
-    if (set == 0 || set == 7)
-    {
-        last = 1;
-    }
-
-    // Sell houses one at a time
-    for (int i = 0; i < amount; i++)
-    {
-        // Find the property with the most houses (forward search)
-        int bj = 0;
-
-        for (int j = 0; j <= last; j++)
-        {
-            // Track the property with more houses to maintain selling balance
-            if (houses[SETS[set, bj]] < houses[SETS[set, j]])
+            // Build houses one at a time
+            for (int i = 0; i < amount; i++)
             {
-                bj = j;
+                // Find the property with the least number of houses (backwards search)
+                int bj = last;
+
+                for (int j = last - 1; j >= 0; j--)
+                {
+                    // Track the property with fewer houses to maintain building balance
+                    if (houses[SETS[set, bj]] > houses[SETS[set, j]])
+                    {
+                        bj = j;
+                    }
+                }
+
+                // Increment house count on the selected property
+                houses[SETS[set, bj]]++;
+
+                // Inform the adapter about the updated house count
+                adapter.SetHouse(SETS[set, bj], houses[SETS[set, bj]]);
             }
         }
 
-        // Decrement house count on the selected property
-        houses[SETS[set, bj]]--;
+        public void SellHouses(int set, int amount)
+        {
+            // By default assume a 3-property set
+            int last = 2;
 
-        // Inform the adapter about the updated house count
-        adapter.SetHouse(SETS[set, bj], houses[SETS[set, bj]]);
+            // Adjust to 2-property set if applicable
+            if (set == 0 || set == 7)
+            {
+                last = 1;
+            }
+
+            // Sell houses one at a time
+            for (int i = 0; i < amount; i++)
+            {
+                // Find the property with the most houses (forward search)
+                int bj = 0;
+
+                for (int j = 0; j <= last; j++)
+                {
+                    // Track the property with more houses to maintain selling balance
+                    if (houses[SETS[set, bj]] < houses[SETS[set, j]])
+                    {
+                        bj = j;
+                    }
+                }
+
+                // Decrement house count on the selected property
+                houses[SETS[set, bj]]--;
+
+                // Inform the adapter about the updated house count
+                adapter.SetHouse(SETS[set, bj], houses[SETS[set, bj]]);
+            }
+        }
+
     }
-}
+
 }

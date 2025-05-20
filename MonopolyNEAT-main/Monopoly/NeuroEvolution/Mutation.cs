@@ -67,7 +67,7 @@ namespace NEAT // Define the NEAT namespace
         Meaning: 90% chance to slightly shift an existing weight.
         If increased: Encourages gentle fine-tuning of weights (more stable).
         If decreased: More weights will be completely re-randomized (more volatile).
-        */.
+        */
 
         public float SHIFT_STEP = 0.1f; 
 

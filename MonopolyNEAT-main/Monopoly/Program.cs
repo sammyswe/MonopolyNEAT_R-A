@@ -21,7 +21,7 @@ namespace Monopoly
             Analytics.instance = a;
 
             // Path to the population save file
-            string path = "C:\\Users\\Brad\\Desktop\\monopoly_population.txt";
+            string path = "MonopolyNEAT-main/samtest.txt";
 
             // Initialize random number generator
             RNG.Initialise();
@@ -132,7 +132,7 @@ namespace Monopoly
                         net_build[net_count] += edge.source + DELIM_COMMA;
                         net_build[net_count] += edge.destination + DELIM_COMMA;
                         net_build[net_count] += edge.weight + DELIM_COMMA;
-                        net_build[net_count] += edge.enabled + DELIM_COMMA;
+                        net_build[net_count] += edge.enabled.ToString() + DELIM_COMMA;
                         net_build[net_count] += edge.innovation + DELIM_COMMA;
                     }
 

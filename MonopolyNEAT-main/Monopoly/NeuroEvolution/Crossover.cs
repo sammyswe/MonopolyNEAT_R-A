@@ -64,16 +64,16 @@ namespace NEAT // Declares namespace NEAT
 
 
         public float C3 = 0.4f; // Weighting for strenght of connection between nodes.
-        
+
         /*
         Measures how different the strengths of connections are.
         Higher C3 means: small differences in weights matter a lot.
         Lower C3 means: we mostly care about which connections exist, not their strength.
         Higher C3 = favors weight precision
         Lower C3 = focuses more on structure than exact values
-        public float DISTANCE = 1.0f; // Speciation distance threshold (unused here)
 
         */
+        public float DISTANCE = 1.0f;// Speciation distance threshold (unused here)
 
         public static void Initialise() // Initializes the singleton instance
         {

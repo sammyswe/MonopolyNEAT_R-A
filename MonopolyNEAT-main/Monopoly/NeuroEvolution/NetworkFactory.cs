@@ -89,7 +89,7 @@ namespace NEAT // Namespace for the NEAT (NeuroEvolution of Augmenting Topologie
             return network; // Step 9: Return the built Genotype with the recurrent structure
         }
 
-        
+
 
 //continue from here
         public Genotype CreateBuggyNetwork() // Generate a malformed/test Genotype structure for debugging
@@ -158,4 +158,3 @@ namespace NEAT // Namespace for the NEAT (NeuroEvolution of Augmenting Topologie
         }
     }
 }
-s

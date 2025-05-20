@@ -19,8 +19,8 @@ namespace Monopoly
         public static int TOURNAMENT_SIZE = 256; // Total number of networks per generation
         public static int ROUND_SIZE = 2000;     // Number of games each bracket plays per round
 
-        public static int WORKERS = 20;          // Threads used per bracket
-        public static int BATCH_SIZE = 20;       // Games per worker thread
+        public static int WORKERS = 5;          // Threads used per bracket
+        public static int BATCH_SIZE = 5;       // Games per worker thread
 
         public NEAT.Genotype champion = null;    // The winning genotype
         public float championScore = 0.0f;       // Fitness score of the winner
